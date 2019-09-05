@@ -8,7 +8,9 @@
   "main": "src/pn532.js",
   "devDependencies": {},
   "dependencies": {
-    "winston": "^0.8.0"
+    "winston": "^0.8.0",
+    "ndef": "^0.2.0",
+    "serialport": "^7.1.5"
   },
   "engine": {
     "node": ">=8.0.0"
