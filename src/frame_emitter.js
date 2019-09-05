@@ -36,7 +36,12 @@ class FrameEmitter extends EventEmitter {
     }
 
     _processBuffer() {
-        // TODO: filter garbage at front of buffer (anything not 0x00, 0x00, 0xFF at start?)
+        let frameStart = Buffer.from([0x00, 0x00, 0xFF]);
+        let garbageEnd = this.buffer.indexOf(frameStart);
+        logger.debug('Garbage index:', garbageEnd);
+        if (garbageEnd > 0) {
+            this.buffer = this.buffer.slice(garbageEnd);
+        }
 
         logger.debug('Processing buffer', util.inspect(this.buffer));
 
