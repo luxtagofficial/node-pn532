@@ -304,7 +304,7 @@ class PN532 extends EventEmitter {
             c.TAG_MEM_TERMINATOR_TLV
         ]);
 
-        logger.debug('block:', util.inspect(new Buffer(block)));
+        logger.debug('block:', util.inspect(Buffer.from(block)));
 
         var PAGE_SIZE = 4;
         var totalBlocks = Math.ceil(block.length / PAGE_SIZE);
@@ -321,7 +321,7 @@ class PN532 extends EventEmitter {
                 }
 
                 logger.debug('Writing block:', blockNum, 'at blockAddress:', blockAddress);
-                logger.debug('pageData:', util.inspect(new Buffer(pageData)));
+                logger.debug('pageData:', util.inspect(Buffer.from(pageData)));
                 return self.writeBlock(pageData, {blockAddress: blockAddress})
                 .then(function(block) {
                     blockNum++;

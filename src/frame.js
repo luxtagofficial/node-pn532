@@ -69,7 +69,7 @@ class DataFrame extends Frame {
             var dataLength = buffer[3];
             var dataStart = 6;
             var dataEnd = dataStart + dataLength;
-            var d = new Buffer(dataLength);
+            var d = Buffer.alloc(dataLength);
             buffer.copy(d, 0, dataStart, dataEnd);
 
             this._data = d;
@@ -180,7 +180,7 @@ class DataFrame extends Frame {
             this.getDataChecksum(),
             POSTAMBLE
         ]);
-        return new Buffer(array);
+        return Buffer.from(array);
     }
 }
 
@@ -205,7 +205,7 @@ class AckFrame extends Frame {
     }
 
     toBuffer() {
-        return new Buffer([
+        return Buffer.from([
             PREAMBLE,
             START_CODE_1,
             START_CODE_2,
@@ -242,7 +242,7 @@ class NackFrame extends Frame {
     }
 
     toBuffer() {
-        return new Buffer([
+        return Buffer.from([
             PREAMBLE,
             START_CODE_1,
             START_CODE_2,
@@ -276,7 +276,7 @@ class ErrorFrame extends DataFrame {
     }
 
     toBuffer() {
-        return new Buffer([
+        return Buffer.from([
             PREAMBLE,
             START_CODE_1,
             START_CODE_2,
