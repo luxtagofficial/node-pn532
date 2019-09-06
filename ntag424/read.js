@@ -1,5 +1,6 @@
 const pn532 = require('../src/pn532');
 const SerialPort = require('serialport');
+const { bin2String, toHexString } = require('./strUtils.js');
 const ndef = require('ndef');
 
 const serialPort = new SerialPort('/dev/ttyUSB0', { baudRate: 115200 });
@@ -72,8 +73,37 @@ async function getNdefFile() {
     frame = await rfid.sendCommand(commandBuffer);
     let dataBody = frame.getDataBody().toJSON();
     let efBuf = Buffer.from(dataBody.data);
-    console.log(efBuf.toString('utf-8'));
+    // let octetCounter = 0;
+    // let octet = '';
+    // for (const value of efBuf.values()) {
+    //     if (octetCounter >= 8) {
+    //         console.log(octet);
+    //         octet = '';
+    //         octetCounter = 0;
+    //     }
+    //     octet += value.toString(16) + ' ';
+    //     octetCounter += 1;
+    // }
+    for (let i = 0; i < (Math.ceil(efBuf.length/8)); i += 1) {
+        let octet = [];
+        for (let j = 0; j < 8; j += 1) {
+            octet.push(efBuf[(j + (i*8))]);
+        }
+        console.log(`${toHexString(octet, ' ')}  ${bin2String(octet)}`);
+    }
 
+    console.log(efBuf.toString('utf-8'));
+    console.log('Length of ndef msg:', efBuf[2]);
+    let decodedNdef = ndef.decodeMessage(efBuf.slice(8, efBuf[2] + 4));
+    for (let i = 0; i < decodedNdef.length; i += 1) {
+        console.log(decodedNdef[i].type, decodedNdef[i].value);
+    }
+    // console.log('Encode:');
+    // let encodeMsg = [ndef.uriRecord('https://verify.luxtag.io?uid=0452376A595780x000036x5BC25F23CDA2A17BQ')];
+    // let encodeBuf = Buffer.from(ndef.encodeMessage(encodeMsg));
+    // console.log(toHexString(encodeBuf, ' '));
+    // console.log(encodeBuf.toString('utf-8'));
+    // console.log(ndef.decodeMessage(encodeBuf));
     // === PN532 InRelease ===
     // commandBuffer = [
     //     0x52, // c.COMMAND_IN_DATA_EXCHANGE
@@ -84,3 +114,4 @@ async function getNdefFile() {
 
     // cb(frame);
 }
+
