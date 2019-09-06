@@ -92,9 +92,14 @@ async function getNdefFile() {
         console.log(`${toHexString(octet, ' ')}  ${bin2String(octet)}`);
     }
 
-    console.log(efBuf.toString('utf-8'));
-    console.log('Length of ndef msg:', efBuf[2]);
-    let decodedNdef = ndef.decodeMessage(efBuf.slice(8, efBuf[2] + 4));
+    // console.log(efBuf.toString('utf-8'));
+    let ndefStart = efBuf.indexOf(Buffer.from([0xD1]));
+    let ndefLength = efBuf[ndefStart - 1]
+    console.log(
+        'ndefStart:', ndefStart,
+        'Length of ndef msg:', ndefLength
+    );
+    let decodedNdef = ndef.decodeMessage(efBuf.slice(ndefStart + 5, ndefLength + ndefStart));
     for (let i = 0; i < decodedNdef.length; i += 1) {
         console.log(decodedNdef[i].type, decodedNdef[i].value);
     }
