@@ -27,6 +27,17 @@ function encodeAES(key, iv, plaintext) {
   return encrypted;
 }
 
+function cmacTruncate(mac) {
+  let truncated = '';
+  for (let i = 0; i < mac.length; i += 2) {
+    if ((i % 4) == 2) {
+      truncated += mac.charAt(i);
+      truncated += mac.charAt(i+1);
+    }
+  }
+  return truncated;
+}
+
 // const encrypted = 'A04C124213C186F22399D33AC2A30215';
 // console.log('encrypted:', encrypted);
 // console.log('decrypted:', decodeAES(key, iv, encrypted));
@@ -35,4 +46,6 @@ function encodeAES(key, iv, plaintext) {
 const plaintext = '';
 console.log('plaintext:', plaintext);
 console.log('encrypted:', encodeAES(key, iv, plaintext));
-console.log('cmac:', aesCmac(key, plaintext));
+let cmac = aesCmac(key, plaintext);
+cmac = cmacTruncate(cmac);
+console.log('cmac:', cmac);
