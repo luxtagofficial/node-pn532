@@ -23,11 +23,15 @@ rfid.on('ready', function() {
         //     efBody = efBuf.toString('utf-8');
         //     console.log(efBody);
         // });
-        getNdefFile();
+        getNdefFile((res) => {
+            for (let i = 0; i < res.length; i += 1) {
+                console.log(res[i].type, res[i].value);
+            }
+        });
     });
 });
 
-async function getNdefFile() {
+async function getNdefFile(cb) {
     // === ISOSelectFile ===
     // select DF
     let commandBuffer = [
@@ -71,19 +75,9 @@ async function getNdefFile() {
         0x00, // Le
     ];
     frame = await rfid.sendCommand(commandBuffer);
+
     let dataBody = frame.getDataBody().toJSON();
     let efBuf = Buffer.from(dataBody.data);
-    // let octetCounter = 0;
-    // let octet = '';
-    // for (const value of efBuf.values()) {
-    //     if (octetCounter >= 8) {
-    //         console.log(octet);
-    //         octet = '';
-    //         octetCounter = 0;
-    //     }
-    //     octet += value.toString(16) + ' ';
-    //     octetCounter += 1;
-    // }
     for (let i = 0; i < (Math.ceil(efBuf.length/8)); i += 1) {
         let octet = [];
         for (let j = 0; j < 8; j += 1) {
@@ -93,16 +87,14 @@ async function getNdefFile() {
     }
 
     // console.log(efBuf.toString('utf-8'));
-    let ndefStart = efBuf.indexOf(Buffer.from([0xD1]));
-    let ndefLength = efBuf[ndefStart - 1]
+    let ndefStart = efBuf.indexOf(Buffer.from([0xD1])); // NDEF record header
+    let ndefLength = efBuf[ndefStart - 1];
     console.log(
         'ndefStart:', ndefStart,
         'Length of ndef msg:', ndefLength
     );
     let decodedNdef = ndef.decodeMessage(efBuf.slice(ndefStart + 5, ndefLength + ndefStart));
-    for (let i = 0; i < decodedNdef.length; i += 1) {
-        console.log(decodedNdef[i].type, decodedNdef[i].value);
-    }
+    return cb(decodedNdef);
     // console.log('Encode:');
     // let encodeMsg = [ndef.uriRecord('https://verify.luxtag.io?uid=0452376A595780x000036x5BC25F23CDA2A17BQ')];
     // let encodeBuf = Buffer.from(ndef.encodeMessage(encodeMsg));
