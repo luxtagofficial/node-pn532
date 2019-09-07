@@ -28,8 +28,19 @@ function toHexString(byteArray, separator) {
   }).join(separator)
 }
 
+function hs2ByteArray(hexString) {
+  let byteArray = [];
+  if (hexString.length % 2) return false;
+  for (let i = 0; i < hexString.length; i += 2) {
+    let byteChunk = hexString.charAt(i) + hexString.charAt(i+1);
+    byteArray.push(parseInt(byteChunk, 16));
+  }
+  return byteArray;
+}
+
 module.exports = {
   bin2String,
   string2Bin,
-  toHexString
+  toHexString,
+  hs2ByteArray
 }
