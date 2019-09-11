@@ -1,10 +1,14 @@
 const pn532 = require('../src/pn532');
 const SerialPort = require('serialport');
-const { bin2String, toHexString } = require('./strUtils.js');
 const ndef = require('ndef');
+const querystring = require('querystring');
+const { bin2String, toHexString } = require('./strUtils.js');
+const { getCmac } = require('./aes128.js');
 
 const serialPort = new SerialPort('/dev/ttyUSB0', { baudRate: 115200 });
 const rfid = new pn532.PN532(serialPort, { pollInterval: 1000 });
+
+let pcdCtr = -1;
 
 rfid.on('ready', function() {
     // rfid.getFirmwareVersion().then(function(res) {
@@ -27,7 +31,29 @@ rfid.on('ready', function() {
             for (let i = 0; i < res.length; i += 1) {
                 console.log(res[i].type, res[i].value);
             }
+            let urlSubstr = res[0].value.split('?');
+            // console.log(urlSubstr);
+            let ndefUrlObj = querystring.parse(urlSubstr[1]);
+            console.dir(ndefUrlObj, {colors: true});
+            let piccCtr = parseInt(ndefUrlObj.ctr, 16);
+            console.log('Tap counter:', piccCtr);
+            if (pcdCtr >= piccCtr) {
+                console.log('\x1b[31m%s\x1b[0m', 'POSSIBLE CLONED TAG');
+                return;
+            }
+            if (ndefUrlObj.uid && ndefUrlObj.ctr && ndefUrlObj.c) {
+                const key = Buffer.alloc(16, 0x00);
+                let pcdCmac = getCmac(key, ndefUrlObj.uid, ndefUrlObj.ctr);
+                console.log('Computed CMAC:', pcdCmac);
+                if (pcdCmac === ndefUrlObj.c.toLowerCase()) {
+                    pcdCtr = piccCtr;
+                    console.log('\x1b[32m%s\x1b[0m', 'SIMPLE SDM VERIFICATION PASS');
+                } else {
+                    console.log('\x1b[31m%s\x1b[0m', 'SIMPLE SDM VERIFICATION FAIL');
+                }
+            }
         });
+        console.log('\nScanning for tags...');
     });
 });
 
@@ -78,21 +104,22 @@ async function getNdefFile(cb) {
 
     let dataBody = frame.getDataBody().toJSON();
     let efBuf = Buffer.from(dataBody.data);
-    for (let i = 0; i < (Math.ceil(efBuf.length/8)); i += 1) {
-        let octet = [];
-        for (let j = 0; j < 8; j += 1) {
-            octet.push(efBuf[(j + (i*8))]);
-        }
-        console.log(`${toHexString(octet, ' ')}  ${bin2String(octet)}`);
-    }
+    // === DEBUG ===
+    // for (let i = 0; i < (Math.ceil(efBuf.length/8)); i += 1) {
+    //     let octet = [];
+    //     for (let j = 0; j < 8; j += 1) {
+    //         octet.push(efBuf[(j + (i*8))]);
+    //     }
+    //     console.log(`${toHexString(octet, ' ')}  ${bin2String(octet)}`);
+    // }
 
     // console.log(efBuf.toString('utf-8'));
     let ndefStart = efBuf.indexOf(Buffer.from([0xD1])); // NDEF record header
     let ndefLength = efBuf[ndefStart - 1];
-    console.log(
-        'ndefStart:', ndefStart,
-        'Length of ndef msg:', ndefLength
-    );
+    // console.log(
+    //     'ndefStart:', ndefStart,
+    //     'Length of ndef msg:', ndefLength
+    // );
     let decodedNdef = ndef.decodeMessage(efBuf.slice(ndefStart + 5, ndefLength + ndefStart));
     return cb(decodedNdef);
     // console.log('Encode:');
