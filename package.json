@@ -8,8 +8,10 @@
   "main": "src/pn532.js",
   "devDependencies": {},
   "dependencies": {
+    "esm": "^3.2.25",
     "ndef": "^0.2.0",
     "node-aes-cmac": "^0.1.1",
+    "open": "^7.0.0",
     "serialport": "^7.1.5",
     "winston": "^0.8.0"
   },

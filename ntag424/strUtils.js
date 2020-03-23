@@ -38,9 +38,40 @@ function hs2ByteArray(hexString) {
   return byteArray;
 }
 
+function leftRotate(buf) {
+  const byteArray = [...buf, buf[0]];
+  return Buffer.from(byteArray.slice(1), 'hex');
+}
+
+function rightRotate(buf) {
+  const start = buf.length - 1;
+  let byteArray = [buf[start], ...buf];
+  byteArray.pop();
+  return Buffer.from(byteArray,'hex');
+}
+
+function xor(a, b) {
+  if (!Buffer.isBuffer(a)) a = Buffer.from(a, 'hex')
+  if (!Buffer.isBuffer(b)) b = Buffer.from(b, 'hex')
+  var res = []
+  if (a.length > b.length) {
+    for (var i = 0; i < b.length; i++) {
+      res.push(a[i] ^ b[i])
+    }
+  } else {
+    for (var i = 0; i < a.length; i++) {
+      res.push(a[i] ^ b[i])
+    }
+  }
+    return Buffer.from(res);
+}
+
 module.exports = {
   bin2String,
   string2Bin,
   toHexString,
-  hs2ByteArray
+  hs2ByteArray,
+  leftRotate,
+  rightRotate,
+  xor
 }

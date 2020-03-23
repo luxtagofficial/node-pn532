@@ -4,6 +4,7 @@ const ndef = require('ndef');
 const querystring = require('querystring');
 const { bin2String, toHexString } = require('./strUtils.js');
 const { getCmac } = require('./aes128.js');
+const open = require('open');
 
 const serialPort = new SerialPort('/dev/ttyUSB0', { baudRate: 115200 });
 const rfid = new pn532.PN532(serialPort, { pollInterval: 1000 });
@@ -17,34 +18,26 @@ rfid.on('ready', function() {
     console.log('Scanning for tags...');
     rfid.on('tag', function(tag) {
         console.dir(tag, {colors: true});
-        // getNdefFile((frame) => {
-        //     frameObject = frame.toJSON();
-        //     efBuf = Buffer.from(frameObject.data.body);
-        //     console.log(frameObject, efBuf.length);
-        //     // for (const value of efBuf.values()) {
-        //     //     console.log(value.toString(16));
-        //     // }
-        //     efBody = efBuf.toString('utf-8');
-        //     console.log(efBody);
-        // });
         getNdefFile((res) => {
             for (let i = 0; i < res.length; i += 1) {
                 console.log(res[i].type, res[i].value);
             }
+            // open(res[0].value);
             let urlSubstr = res[0].value.split('?');
             // console.log(urlSubstr);
+            // open(`http://${process.argv[2]}/?${urlSubstr[1]}`);
             let ndefUrlObj = querystring.parse(urlSubstr[1]);
             console.dir(ndefUrlObj, {colors: true});
             let piccCtr = parseInt(ndefUrlObj.ctr, 16);
             console.log('PCD counter:', pcdCtr, 'PICC counter:', piccCtr);
             if (pcdCtr >= piccCtr) {
-                console.log('\x1b[31m%s\x1b[0m', 'POSSIBLE CLONED TAG');
+                console.log('\x1b[31m%s\x1b[0m', 'CLONED TAG');
             } else {
                 if (ndefUrlObj.uid && ndefUrlObj.ctr && ndefUrlObj.c) {
                     const key = Buffer.alloc(16, 0x00);
                     let pcdCmac = getCmac(key, ndefUrlObj.uid, ndefUrlObj.ctr);
                     console.log('Computed CMAC:', pcdCmac);
-                    if (pcdCmac === ndefUrlObj.c.toLowerCase()) {
+                    if (pcdCmac.toString('hex') === ndefUrlObj.c.toLowerCase()) {
                         pcdCtr = piccCtr;
                         console.log('\x1b[32m%s\x1b[0m', 'SIMPLE SDM VERIFICATION PASS');
                     } else {
@@ -120,7 +113,8 @@ async function getNdefFile(cb) {
     //     'ndefStart:', ndefStart,
     //     'Length of ndef msg:', ndefLength
     // );
-    let decodedNdef = ndef.decodeMessage(efBuf.slice(ndefStart + 5, ndefLength + ndefStart));
+    let decodedNdef = ndef.decodeMessage(efBuf.slice(ndefStart + 0, ndefLength + ndefStart));
+    // let decodedNdef = ndef.decodeMessage(efBuf);
     return cb(decodedNdef);
     // console.log('Encode:');
     // let encodeMsg = [ndef.uriRecord('https://verify.luxtag.io?uid=0452376A595780x000036x5BC25F23CDA2A17BQ')];
@@ -138,4 +132,3 @@ async function getNdefFile(cb) {
 
     // cb(frame);
 }
-
