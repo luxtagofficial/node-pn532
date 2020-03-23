@@ -13,18 +13,30 @@ rfid.on('ready', function() {
   rfid.on('tag', async (tag) => {
     try {
       let frame = null;
+      let cmdCtr = 0;
       console.dir(tag, {colors: true});
 
-      let apduArray = [ 0x40, 0x01, ...cAPDU.selectDF() ];
-      console.log(apduArray);
-      frame = await rfid.sendCommand(apduArray);
-      console.log(Buffer.from(frame.getDataBody().toJSON().data));
+      frame = await rfid.sendCommand(cmdDataExchange(cAPDU.selectDF()));
+      // console.log(resBuf(frame));
 
-      // const authEV2res = await cAPDU.authEV2first(Buffer.alloc(16, 0x00), 0, rfid);
-      // console.log('authEV2res:', authEV2res);
+      const authEV2res = await cAPDU.authEV2first(Buffer.alloc(16, 0x00), 0, rfid);
+      console.log('authEV2res:', authEV2res);
+
+      const uid = await cAPDU.getCardUID(authEV2res, cmdCtr, rfid);
+      console.log('uid:', uid);
 
     } catch(e) {
       console.log(e);
     }
   });
 });
+
+const cmdDataExchange = (buffer) => {
+  return [ 0x40, 0x01, ...buffer ];
+}
+
+const resBuf = (frame) => {
+  let buf = Buffer.from(frame.getDataBody().toJSON().data);
+  buf = buf.slice(1, buf.length - 1);
+  return buf;
+}

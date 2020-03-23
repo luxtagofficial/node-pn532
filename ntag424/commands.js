@@ -28,15 +28,13 @@ export const getUID = () => {
 }
 
 export const getCardUID = async (authEV2Obj, cmdCtr, reader) => {
+  // command is CommMode.Full, but there is no data in C-APDU 
+  // No encrypt step. Only MACing
   let cmdCounter = Buffer.from(cmdCtr.toString(16).padStart(4, '0'), 'hex').swap16().toString('hex');
-  // const IVcPlaintext = Buffer.from('A55A' + authEV2Obj.txid.toString('hex') + cmdCounter + '0000000000000000', 'hex')
-  // const IVc = encodeAES(authEV2Obj.enc, Buffer.alloc(16, 0x00), IVcPlaintext);
-  // // const IVc = '5b09309e79c96d4b9fee7326f61f9dd1';
-  // console.log('IVc:', IVc);
 
   let packetTxid = '51' + cmdCounter + authEV2Obj.txid.toString('hex');
   let cmdCmac = getAPDUCmac(authEV2Obj.mac, Buffer.from(packetTxid, 'hex'));
-  console.log('cmd cmac truncated:', cmdCmac.toString('hex'));
+  // console.log('cmd cmac truncated:', cmdCmac.toString('hex'));
 
   // Datasheet Get UID
   const packet = Buffer.from([
@@ -48,7 +46,8 @@ export const getCardUID = async (authEV2Obj, cmdCtr, reader) => {
     ...cmdCmac,
     0x00, // Le
   ]);
-  let frame = await reader.transmit(packet, 256);
+  let frame = await reader.sendCommand(cmdDataExchange(packet));
+  frame = resBuf(frame);
   // console.log('getCarduid res:', frame);
 
   const status = frame.slice(frame.length - 2);
@@ -58,7 +57,7 @@ export const getCardUID = async (authEV2Obj, cmdCtr, reader) => {
   }
 
   let uid = frame.slice(0, frame.length - 10);
-  console.log('encrypted UID:', uid);
+  // console.log('encrypted UID:', uid);
 
   cmdCtr += 1;
   cmdCounter = Buffer.from(cmdCtr.toString(16).padStart(4, '0'), 'hex').swap16().toString('hex');
@@ -67,8 +66,7 @@ export const getCardUID = async (authEV2Obj, cmdCtr, reader) => {
   // console.log('IVr:', IVr);
 
   uid = decodeAES(authEV2Obj.enc, Buffer.from(IVr, 'hex'), uid).slice(0, 14);
-  console.log('decrypted uid:', uid);
-
+  // console.log('decrypted uid:', uid);
 
   return uid;
 }
@@ -314,7 +312,9 @@ export const authEV2first = async (key, keyNum, reader) => {
     // 0x00, // PCDcap2.1
     0x00, // Le
   ]);
-  let frame = await reader.sendCommand(Uint8Array.from(packet));
+  let frame = await reader.sendCommand(cmdDataExchange(packet));
+  frame = resBuf(frame);
+  // console.log(resBuf(frame));
   let status = frame.slice(frame.length - 2);
   let bufComp = status.compare(Buffer.from('91af', 'hex'));
   if (bufComp != 0) {
@@ -344,7 +344,8 @@ export const authEV2first = async (key, keyNum, reader) => {
     ...rndA_rndBprime,
     0x00, // Le
   ]);
-  frame = await reader.sendCommand(Uint8Array.from(packet));
+  frame = await reader.sendCommand(cmdDataExchange(packet));
+  frame = resBuf(frame);
   // console.log('second part rAPDU:', frame);
   status = frame.slice(frame.length - 2);
   bufComp = status.compare(Buffer.from('9100', 'hex'));
@@ -372,6 +373,16 @@ export const authEV2first = async (key, keyNum, reader) => {
   // console.log(sessionKeys);
 
   return authEV2res;
+}
+
+const cmdDataExchange = (buffer) => {
+  return [ 0x40, 0x01, ...buffer ];
+}
+
+const resBuf = (frame) => {
+  let buf = Buffer.from(frame.getDataBody().toJSON().data);
+  buf = buf.slice(1, buf.length - 1);
+  return buf;
 }
 
 //             13C5 DB8A5930439F                   C3DEF9A4C675360F
