@@ -22,29 +22,29 @@ rfid.on('ready', function() {
             for (let i = 0; i < res.length; i += 1) {
                 console.log(res[i].type, res[i].value);
             }
-            // open(res[0].value);
-            let urlSubstr = res[0].value.split('?');
-            // console.log(urlSubstr);
-            // open(`http://${process.argv[2]}/?${urlSubstr[1]}`);
-            let ndefUrlObj = querystring.parse(urlSubstr[1]);
-            console.dir(ndefUrlObj, {colors: true});
-            let piccCtr = parseInt(ndefUrlObj.ctr, 16);
-            console.log('PCD counter:', pcdCtr, 'PICC counter:', piccCtr);
-            if (pcdCtr >= piccCtr) {
-                console.log('\x1b[31m%s\x1b[0m', 'CLONED TAG');
-            } else {
-                if (ndefUrlObj.uid && ndefUrlObj.ctr && ndefUrlObj.c) {
-                    const key = Buffer.alloc(16, 0x00);
-                    let pcdCmac = getCmac(key, ndefUrlObj.uid, ndefUrlObj.ctr);
-                    console.log('Computed CMAC:', pcdCmac);
-                    if (pcdCmac.toString('hex') === ndefUrlObj.c.toLowerCase()) {
-                        pcdCtr = piccCtr;
-                        console.log('\x1b[32m%s\x1b[0m', 'SIMPLE SDM VERIFICATION PASS');
-                    } else {
-                        console.log('\x1b[31m%s\x1b[0m', 'SIMPLE SDM VERIFICATION FAIL');
-                    }
-                }
-            }
+            // // open(res[0].value);
+            // let urlSubstr = res[0].value.split('?');
+            // // console.log(urlSubstr);
+            // // open(`http://${process.argv[2]}/?${urlSubstr[1]}`);
+            // let ndefUrlObj = querystring.parse(urlSubstr[1]);
+            // console.dir(ndefUrlObj, {colors: true});
+            // let piccCtr = parseInt(ndefUrlObj.ctr, 16);
+            // console.log('PCD counter:', pcdCtr, 'PICC counter:', piccCtr);
+            // if (pcdCtr >= piccCtr) {
+            //     console.log('\x1b[31m%s\x1b[0m', 'CLONED TAG');
+            // } else {
+            //     if (ndefUrlObj.uid && ndefUrlObj.ctr && ndefUrlObj.c) {
+            //         const key = Buffer.alloc(16, 0x00);
+            //         let pcdCmac = getCmac(key, ndefUrlObj.uid, ndefUrlObj.ctr);
+            //         console.log('Computed CMAC:', pcdCmac);
+            //         if (pcdCmac.toString('hex') === ndefUrlObj.c.toLowerCase()) {
+            //             pcdCtr = piccCtr;
+            //             console.log('\x1b[32m%s\x1b[0m', 'SIMPLE SDM VERIFICATION PASS');
+            //         } else {
+            //             console.log('\x1b[31m%s\x1b[0m', 'SIMPLE SDM VERIFICATION FAIL');
+            //         }
+            //     }
+            // }
             console.log('\nScanning for tags...');
         });
     });
@@ -98,13 +98,13 @@ async function getNdefFile(cb) {
     let dataBody = frame.getDataBody().toJSON();
     let efBuf = Buffer.from(dataBody.data);
     // === DEBUG ===
-    // for (let i = 0; i < (Math.ceil(efBuf.length/8)); i += 1) {
-    //     let octet = [];
-    //     for (let j = 0; j < 8; j += 1) {
-    //         octet.push(efBuf[(j + (i*8))]);
-    //     }
-    //     console.log(`${toHexString(octet, ' ')}  ${bin2String(octet)}`);
-    // }
+    for (let i = 0; i < (Math.ceil(efBuf.length/8)); i += 1) {
+        let octet = [];
+        for (let j = 0; j < 8; j += 1) {
+            octet.push(efBuf[(j + (i*8))]);
+        }
+        console.log(`${toHexString(octet, ' ')}  ${bin2String(octet)}`);
+    }
 
     // console.log(efBuf.toString('utf-8'));
     let ndefStart = efBuf.indexOf(Buffer.from([0xD1])); // NDEF record header

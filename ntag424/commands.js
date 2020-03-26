@@ -189,46 +189,12 @@ export const writeNDEFfull = (sunUrl, authEV2Obj, cmdCounter) => {
   return packet;
 }
 
-export const changeFileSettings = (authEV2Obj, cmdCtr, settingsObj) => {
-  const settings = Buffer.from([
-    // settingsObj.fileNo,
-    0x40, // SDM and mirroring enabled 0x40
-    0xE0, 0x00, // access conditions E0 00
-    0xC1, // SDM options: uid, ctr C1
-    0xFE, 0xE0, // SDM access rights FE E0
-    settingsObj.uidOffset, 0x00, 0x00,
-    settingsObj.ctrOffset, 0x00, 0x00,
-    settingsObj.macInputOffset, 0x00, 0x00,
-    settingsObj.macOffset, 0x00, 0x00,
-  ]);
-  // console.log('settings:', settings.toString('hex'));
+export const changeFileSettings = (authEV2Obj, cmdCtr, fileNo, settings) => {
 
   // === commModeFull ===
-  return commModeFull(authEV2Obj, 0x5F, cmdCtr, settingsObj.fileNo, settings);
-  console.log('commmodefull payload:', payload);
+  return commModeFull(authEV2Obj, 0x5F, cmdCtr, fileNo, settings);
+  // console.log('commmodefull payload:', payload);
 
-  // === commModeMac ===
-  // const cmdCounter = Buffer.from(cmdCtr.toString(16).padStart(4, '0'), 'hex').swap16().toString('hex');
-  // let packetTxid = '5f' + cmdCounter + authEV2Obj.txid.toString('hex') + settings.toString('hex');
-  // let cmdCmac = getAPDUCmac(authEV2Obj.mac, Buffer.from(packetTxid, 'hex'));
-  // console.log('cmd cmac truncated:', cmdCmac.toString('hex'));
-
-  // const packet = Buffer.from([
-  //   0x90, // CLA
-  //   0x5F, // command
-  //   0x00, // P1
-  //   0x00, // P2
-  //   // (settings.length + cmdCmac.length), // Lc
-  //   settings.length, // Lc
-  //   ...settings,
-  //   // ...cmdCmac,
-  //   0x00, // Le
-  // ]);
-  // return packet;
-
-// 0240e000c1e0f024000037000040000040000000
-// 0240e000c1e0f024000037000040000040000014bd50abc95eee1100
-// 0240e0eec1fee037000040000040000000
 }
 
 export const getFileSettings = (authEV2Obj, cmdCtr, fileNo) => {
@@ -258,22 +224,22 @@ const commModeFull = (authEV2Obj, cmd, cmdCtr, cmdHeader, cmdData) => {
   const IVcPlaintext = Buffer.from('A55A' + authEV2Obj.txid.toString('hex') + cmdCounter + '0000000000000000', 'hex')
   const IVc = encodeAES(authEV2Obj.enc, Buffer.alloc(16, 0x00), IVcPlaintext);
   // const IVc = '5b09309e79c96d4b9fee7326f61f9dd1';
-  console.log('IVc:', IVc);
+  // console.log('IVc:', IVc);
   // // console.log('enc:', authEV2Obj.enc.toString('hex'));
 
   cmdData = Buffer.concat([ cmdData, Buffer.from([0x80]) ]);
   const paddingCount = 16 - (cmdData.length % 16);
   cmdData = Buffer.concat([ cmdData, Buffer.alloc(paddingCount, 0x00) ]);
   // console.log('paddingCount:', paddingCount);
-  console.log('settings:', cmdData.toString('hex'));
+  // console.log('settings:', cmdData.toString('hex'));
 
   const encCmdData = encodeAES(authEV2Obj.enc, Buffer.from(IVc, 'hex'), cmdData, false);
   // const encCmdData = encodeAES(Buffer.from('1309C877509E5A215007FF0ED19CA564', 'hex'), Buffer.from('3E27082AB2ACC1EF55C57547934E9962', 'hex'), Buffer.from('4000E0C1F12120000043000043000080', 'hex'), false);
-  console.log('encrypted cmdData:', encCmdData, encCmdData.length);
+  // console.log('encrypted cmdData:', encCmdData, encCmdData.length);
   let packetTxid = '5f' + cmdCounter + authEV2Obj.txid.toString('hex') + cmdHeader.toString(16).padStart(2, '0') + encCmdData;
-  console.log('mac input:', packetTxid);
+  // console.log('mac input:', packetTxid);
   let cmdCmac = getAPDUCmac(authEV2Obj.mac, Buffer.from(packetTxid, 'hex'));
-  console.log('cmd cmac truncated:', cmdCmac.toString('hex'));
+  // console.log('cmd cmac truncated:', cmdCmac.toString('hex'));
 
   const payload = Buffer.from([
     0x90,
@@ -287,7 +253,7 @@ const commModeFull = (authEV2Obj, cmd, cmdCtr, cmdHeader, cmdData) => {
     0x00
   ]);
 
-  console.log('commmodefull payload:', payload.toString('hex'));
+  // console.log('commmodefull payload:', payload.toString('hex'));
   return payload;
 
 // 4000e0c1f0e024000037000040000040000080
