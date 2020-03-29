@@ -20,7 +20,7 @@ rfid.on('ready', function() {
       frame = await rfid.sendCommand(cmdDataExchange(cAPDU.selectDF()));
       // console.log(resBuf(frame));
 
-      const appKey0 = Buffer.alloc(16, 0x00);
+      const appKey0 = Buffer.from('5dd31cdf3989fccf6abf0ae9ea7e08b1', 'hex');
       const authEV2res = await cAPDU.authEV2first(appKey0, 0, rfid);
       // console.log('authEV2res:', authEV2res);
 
@@ -29,9 +29,7 @@ rfid.on('ready', function() {
 
       // === Erase ===
       frame = await rfid.sendCommand(cmdDataExchange(cAPDU.writeData(2, Buffer.alloc(128, 0x00))));
-      frame = resBuf(frame);
-      errorFrameHandler(frame);
-      console.log(frame);
+      console.log(resBuf(frame, '9100'));
       cmdCtr += 1;
 
       // const fileSettings = Buffer.from([
@@ -50,9 +48,15 @@ rfid.on('ready', function() {
       ]);
       console.log('settings:', fileSettings.toString('hex'));
       frame = await rfid.sendCommand(cmdDataExchange(cAPDU.changeFileSettings(authEV2res, cmdCtr, 2, fileSettings)));
-      frame = resBuf(frame);
-      errorFrameHandler(frame);
-      console.log(frame);
+      console.log(resBuf(frame, '9100'));
+      cmdCtr += 1;
+
+      const newKey = Buffer.alloc(16, 0x00);
+      const changeKeyCmd = cAPDU.changeKey(authEV2res, cmdCtr, 0x00, newKey, 0x00);
+      console.log('changeKey cmd:', changeKeyCmd.toString('hex'));
+      frame = await rfid.sendCommand(cmdDataExchange(changeKeyCmd));
+      console.log(resBuf(frame, '9100'));
+
 
       console.log('\x1b[32m%s\x1b[0m', 'WRITE SUCCESS');
 
@@ -67,18 +71,14 @@ const cmdDataExchange = (buffer) => {
   return [ 0x40, 0x01, ...buffer ];
 }
 
-const resBuf = (frame) => {
+const resBuf = (frame, successStatus) => {
   let buf = Buffer.from(frame.getDataBody().toJSON().data);
   buf = buf.slice(1, buf.length - 1);
-  return buf;
-}
-
-const errorFrameHandler = (frame) => {
-  // console.log('second part rAPDU:', frame);
-  status = frame.slice(frame.length - 2);
-  bufComp = status.compare(Buffer.from('9100', 'hex'));
+  const status = buf.slice(buf.length - 2);
+  bufComp = status.compare(Buffer.from(successStatus, 'hex'));
   if (bufComp != 0) {
     throw new Error(`Status word ${status.toString('hex')}`);
+  } else {
+    return buf;
   }
-
 }

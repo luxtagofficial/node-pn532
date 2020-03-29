@@ -42,8 +42,13 @@ rfid.on('ready', function() {
         64, 0x00, 0x00, // mac input offset
         64, 0x00, 0x00, // mac offset
       ]);
-      console.log('settings:', fileSettings.toString('hex'));
       frame = await rfid.sendCommand(cmdDataExchange(cAPDU.changeFileSettings(authEV2res, cmdCtr, 2, fileSettings)));
+      console.log(resBuf(frame, '9100'));
+      cmdCtr += 1;
+
+      const newKey = Buffer.from('5dd31cdf3989fccf6abf0ae9ea7e08b1', 'hex');
+      const changeKeyCmd = cAPDU.changeKey(authEV2res, cmdCtr, 0x00, newKey, 0x01);
+      frame = await rfid.sendCommand(cmdDataExchange(changeKeyCmd));
       console.log(resBuf(frame, '9100'));
 
       console.log('\x1b[32m%s\x1b[0m', 'WRITE SUCCESS');

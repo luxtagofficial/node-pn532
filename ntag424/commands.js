@@ -223,7 +223,6 @@ const commModeFull = (authEV2Obj, cmd, cmdCtr, cmdHeader, cmdData) => {
   const cmdCounter = Buffer.from(cmdCtr.toString(16).padStart(4, '0'), 'hex').swap16().toString('hex');
   const IVcPlaintext = Buffer.from('A55A' + authEV2Obj.txid.toString('hex') + cmdCounter + '0000000000000000', 'hex')
   const IVc = encodeAES(authEV2Obj.enc, Buffer.alloc(16, 0x00), IVcPlaintext);
-  // const IVc = '5b09309e79c96d4b9fee7326f61f9dd1';
   // console.log('IVc:', IVc);
   // // console.log('enc:', authEV2Obj.enc.toString('hex'));
 
@@ -234,7 +233,6 @@ const commModeFull = (authEV2Obj, cmd, cmdCtr, cmdHeader, cmdData) => {
   // console.log('settings:', cmdData.toString('hex'));
 
   const encCmdData = encodeAES(authEV2Obj.enc, Buffer.from(IVc, 'hex'), cmdData, false);
-  // const encCmdData = encodeAES(Buffer.from('1309C877509E5A215007FF0ED19CA564', 'hex'), Buffer.from('3E27082AB2ACC1EF55C57547934E9962', 'hex'), Buffer.from('4000E0C1F12120000043000043000080', 'hex'), false);
   // console.log('encrypted cmdData:', encCmdData, encCmdData.length);
   let packetTxid = '5f' + cmdCounter + authEV2Obj.txid.toString('hex') + cmdHeader.toString(16).padStart(2, '0') + encCmdData;
   // console.log('mac input:', packetTxid);
@@ -256,11 +254,36 @@ const commModeFull = (authEV2Obj, cmd, cmdCtr, cmdHeader, cmdData) => {
   // console.log('commmodefull payload:', payload.toString('hex'));
   return payload;
 
-// 4000e0c1f0e024000037000040000040000080
-// 4000e0c1f0e02400003700004000004000008000000000000000000000000000
-// 02d695219de234555284d4a678f1b2c9d7edd9f0d73f866bf2ecc3f46f93f32650fa6bce6ef6f39d74b46047f93ae14d1848616e5350eb57b606255a151e3ef708d9a0f2f6f650849f00
-// 022F81A62EB50A5DD4B8A003BDD10F712A0E62908FC6BAE05300
-// 02fa8c875638efbe3003ef1c2798246835bb369064778715dea8d58c324b15a6fec7b2049148cd2f5c00
+}
+
+export const changeKey = (authEV2Obj, cmdCtr, keyNo, newKey, keyVer) => {
+  const cmdCounter = Buffer.from(cmdCtr.toString(16).padStart(4, '0'), 'hex').swap16().toString('hex');
+  const IVcPlaintext = Buffer.from('A55A' + authEV2Obj.txid.toString('hex') + cmdCounter + '0000000000000000', 'hex')
+  const IVc = encodeAES(authEV2Obj.enc, Buffer.alloc(16, 0x00), IVcPlaintext);
+
+  let cmdData = Buffer.from([ ...newKey, keyVer, 0x80 ]);
+  const paddingCount = 16 - (cmdData.length % 16);
+  cmdData = Buffer.concat([ cmdData, Buffer.alloc(paddingCount, 0x00) ]);
+  // console.log('changeey plaintext:', cmdData.toString('hex'), cmdData.length);
+
+  const encCmdData = encodeAES(authEV2Obj.enc, Buffer.from(IVc, 'hex'), cmdData, false);
+  // console.log('encrypted cmdData:', encCmdData, encCmdData.length);
+  const packetTxid = 'c4' + cmdCounter + authEV2Obj.txid.toString('hex') + keyNo.toString(16).padStart(2, '0') + encCmdData;
+  const cmdCmac = getAPDUCmac(authEV2Obj.mac, Buffer.from(packetTxid, 'hex'));
+  // console.log('cmd cmac truncated:', cmdCmac.toString('hex'));
+
+  const payload = Buffer.from([
+    0x90,
+    0xC4,
+    0x00, 0x00, // P1, P2
+    (1 + (encCmdData.length/2) + 8), // Lc
+    keyNo,
+    ...Buffer.from(encCmdData, 'hex'),
+    ...cmdCmac,
+    0x00
+  ]);
+
+  return payload;
 }
 
 export const authEV2first = async (key, keyNum, reader) => {
