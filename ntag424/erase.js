@@ -27,22 +27,26 @@ rfid.on('ready', function() {
       // const uid = await cAPDU.getCardUID(authEV2res, cmdCtr, rfid);
       // console.log('uid:', uid);
 
-      const url = 'https://sun.luxtagenterprise.io/?uid=00000000000000&ctr=000000&c=0000000000000000';
-      frame = await rfid.sendCommand(cmdDataExchange(cAPDU.writeNDEFplain(url)));
+      // === Erase ===
+      frame = await rfid.sendCommand(cmdDataExchange(cAPDU.writeData(2, Buffer.alloc(128, 0x00))));
       frame = resBuf(frame);
       errorFrameHandler(frame);
       console.log(frame);
       cmdCtr += 1;
 
+      // const fileSettings = Buffer.from([
+      //   0x40, // SDM and mirroring enabled 0x40
+      //   0xE0, 0x00, // access conditions E0 00
+      //   0xC1, // SDM options: uid, ctr C1
+      //   0xFE, 0xE0, // SDM access rights FE E0
+      //   36, 0x00, 0x00, // uid offset
+      //   55, 0x00, 0x00, // ctr offset
+      //   64, 0x00, 0x00, // mac input offset
+      //   64, 0x00, 0x00, // mac offset
+      // ]);
       const fileSettings = Buffer.from([
-        0x40, // SDM and mirroring enabled 0x40
+        0x00, // SDM and mirroring enabled 0x40
         0xE0, 0x00, // access conditions E0 00
-        0xC1, // SDM options: uid, ctr C1
-        0xFE, 0xE0, // SDM access rights FE E0
-        36, 0x00, 0x00, // uid offset
-        55, 0x00, 0x00, // ctr offset
-        64, 0x00, 0x00, // mac input offset
-        64, 0x00, 0x00, // mac offset
       ]);
       console.log('settings:', fileSettings.toString('hex'));
       frame = await rfid.sendCommand(cmdDataExchange(cAPDU.changeFileSettings(authEV2res, cmdCtr, 2, fileSettings)));
